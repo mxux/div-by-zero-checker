@@ -1,9 +1,7 @@
 package org.checkerframework.checker.dividebyzero;
 
-import java.lang.annotation.Annotation;
-import java.util.Set;
-import javax.lang.model.element.AnnotationMirror;
-import org.checkerframework.checker.dividebyzero.qual.*;
+import org.checkerframework.checker.dividebyzero.qual.NonZero;
+import org.checkerframework.checker.dividebyzero.qual.Zero;
 import org.checkerframework.dataflow.analysis.ConditionalTransferResult;
 import org.checkerframework.dataflow.analysis.RegularTransferResult;
 import org.checkerframework.dataflow.analysis.TransferInput;
@@ -17,6 +15,10 @@ import org.checkerframework.framework.flow.CFValue;
 import org.checkerframework.framework.type.QualifierHierarchy;
 import org.checkerframework.javacutil.AnnotationBuilder;
 import org.checkerframework.javacutil.AnnotationUtils;
+
+import javax.lang.model.element.AnnotationMirror;
+import java.lang.annotation.Annotation;
+import java.util.Set;
 
 public class DivByZeroTransfer extends CFTransfer {
 
@@ -75,8 +77,23 @@ public class DivByZeroTransfer extends CFTransfer {
    * @return a refined type for lhs
    */
   private AnnotationMirror refineLhsOfComparison(
-      Comparison operator, AnnotationMirror lhs, AnnotationMirror rhs) {
-    // TODO
+          Comparison operator, AnnotationMirror lhs, AnnotationMirror rhs) {
+    switch (operator) {
+      case EQ:
+        return glb(lhs, rhs);
+      case LT:
+      case GT:
+      case NE:
+        if (equal(rhs, reflect(Zero.class))){
+          return reflect(NonZero.class);
+        }
+        if (equal(lhs, rhs)) {
+          return bottom();
+        }
+      case LE:
+      case GE:
+        return lhs;
+    }
     return lhs;
   }
 
@@ -96,9 +113,57 @@ public class DivByZeroTransfer extends CFTransfer {
    * @return the lattice point for the result of the expression
    */
   private AnnotationMirror arithmeticTransfer(
-      BinaryOperator operator, AnnotationMirror lhs, AnnotationMirror rhs) {
-    // TODO
-    return top();
+          BinaryOperator operator, AnnotationMirror lhs, AnnotationMirror rhs) {
+    if (equal(lhs, top()) || equal(rhs, top())) {
+      return top();
+    }
+    if (equal(lhs, bottom()) || equal(rhs, bottom())) {
+      return bottom();
+    }
+
+    switch (operator) {
+      case PLUS:
+        if (equal(lhs, reflect(Zero.class))) {
+          return rhs;
+        }
+        else if (equal(rhs, reflect(Zero.class))) {
+          return lhs;
+        }
+
+        if (!equal(lhs, rhs)) {
+          return top();
+        }
+
+        return top();
+      case MINUS:
+        if (equal(lhs, reflect(Zero.class))) {
+          return rhs;
+        }
+
+        else if (equal(rhs, reflect(Zero.class))){
+          return lhs;
+        }
+
+        return top();
+      case TIMES:
+        if (equal(lhs, reflect(Zero.class)) || equal(rhs, reflect(Zero.class))) {
+          return reflect(Zero.class);
+        }
+
+        if (equal(lhs, reflect(NonZero.class)) && equal(rhs, reflect(NonZero.class))) {
+          return reflect(NonZero.class);
+        }
+
+        return top();
+      case DIVIDE:
+        if (equal(rhs, reflect(Zero.class))) {
+          return bottom();
+        }
+
+        return top();
+      default:
+        return top();
+    }
   }
 
   // ========================================================================

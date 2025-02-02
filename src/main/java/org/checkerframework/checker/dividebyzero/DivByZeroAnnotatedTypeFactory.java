@@ -1,13 +1,9 @@
 package org.checkerframework.checker.dividebyzero;
 
-import com.sun.source.tree.BinaryTree;
-import com.sun.source.tree.CompoundAssignmentTree;
-import com.sun.source.tree.LiteralTree;
-import com.sun.source.tree.Tree;
-import com.sun.source.tree.UnaryTree;
-import java.lang.annotation.Annotation;
-import javax.lang.model.element.AnnotationMirror;
-import org.checkerframework.checker.dividebyzero.qual.*;
+import com.sun.source.tree.*;
+import org.checkerframework.checker.dividebyzero.qual.NonZero;
+import org.checkerframework.checker.dividebyzero.qual.Top;
+import org.checkerframework.checker.dividebyzero.qual.Zero;
 import org.checkerframework.common.basetype.BaseAnnotatedTypeFactory;
 import org.checkerframework.common.basetype.BaseTypeChecker;
 import org.checkerframework.framework.type.AnnotatedTypeFactory;
@@ -15,6 +11,9 @@ import org.checkerframework.framework.type.AnnotatedTypeMirror;
 import org.checkerframework.framework.type.treeannotator.ListTreeAnnotator;
 import org.checkerframework.framework.type.treeannotator.TreeAnnotator;
 import org.checkerframework.javacutil.AnnotationBuilder;
+
+import javax.lang.model.element.AnnotationMirror;
+import java.lang.annotation.Annotation;
 
 public class DivByZeroAnnotatedTypeFactory extends BaseAnnotatedTypeFactory {
 
@@ -28,14 +27,21 @@ public class DivByZeroAnnotatedTypeFactory extends BaseAnnotatedTypeFactory {
     switch (literal.getKind()) {
       case INT_LITERAL:
         int intValue = (Integer) literal.getValue();
-        // TODO
-        break;
+        if (intValue == 0) {
+          return Zero.class;
+        } else {
+          return NonZero.class;
+        }
       case LONG_LITERAL:
         long longValue = (Long) literal.getValue();
-        // TODO
-        break;
+        if (longValue == 0) {
+          return Zero.class;
+        } else {
+          return NonZero.class;
+        }
+      default:
+        return Top.class;
     }
-    return Top.class;
   }
 
   // ========================================================================
